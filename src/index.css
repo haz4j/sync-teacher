@@ -74,7 +74,14 @@ body {
   backdrop-filter: blur(8px);
 }
 
-.beat-pulse {
+.hud-signals {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.beat-pulse,
+.detect-pulse {
   width: 14px;
   height: 14px;
   border-radius: 50%;
@@ -87,10 +94,56 @@ body {
   transform: scale(1.35);
 }
 
+.detect-pulse.on {
+  background: var(--teal);
+  transform: scale(1.35);
+}
+
+.score-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  align-items: center;
+}
+
 .score-stats {
   display: flex;
   gap: 1.5rem;
   justify-content: center;
+}
+
+.recent-row {
+  display: flex;
+  gap: 0.35rem;
+  min-height: 0.65rem;
+  align-items: center;
+}
+
+.recent-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+}
+
+.recent-dot.hit {
+  background: var(--hit);
+}
+
+.recent-dot.miss {
+  background: var(--miss);
+}
+
+.recent-empty {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.signal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.68rem;
+  color: var(--muted);
 }
 
 .stat {

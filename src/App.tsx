@@ -15,10 +15,13 @@ const emptyScore: ScoreSnapshot = {
   accuracy: 0,
   lastResult: null,
   lastOffsetMs: null,
+  recent: [],
 }
 
 export default function App() {
   const [bpm, setBpm] = useState(80)
+  const [windowMs, setWindowMs] = useState(220)
+  const [latencyMs, setLatencyMs] = useState(120)
   const [running, setRunning] = useState(false)
   const [legsOnly, setLegsOnly] = useState(false)
   const [lastBeatMs, setLastBeatMs] = useState<number | null>(null)
@@ -39,6 +42,14 @@ export default function App() {
   useEffect(() => {
     metronomeRef.current.setBpm(bpm)
   }, [bpm])
+
+  useEffect(() => {
+    scorerRef.current.setWindowMs(windowMs)
+  }, [windowMs])
+
+  useEffect(() => {
+    scorerRef.current.setLatencyMs(latencyMs)
+  }, [latencyMs])
 
   useEffect(() => {
     runningRef.current = running
@@ -91,6 +102,8 @@ export default function App() {
     setLastBeatMs(null)
     setBeatIndex(0)
     metro.setBpm(bpm)
+    scorerRef.current.setWindowMs(windowMs)
+    scorerRef.current.setLatencyMs(latencyMs)
 
     await metro.start((beatTimeMs, index) => {
       scorerRef.current.addBeat(beatTimeMs, index)
@@ -100,7 +113,7 @@ export default function App() {
       setScore(scorerRef.current.snapshot())
     })
     setRunning(true)
-  }, [bpm, flashBeat, clearStats])
+  }, [bpm, windowMs, latencyMs, flashBeat, clearStats])
 
   const handleLandmarks = useCallback(
     (landmarks: Landmark[] | null, timeMs: number) => {
@@ -139,16 +152,25 @@ export default function App() {
         <p className="tagline">Топайте ногой в такт метроному</p>
       </header>
 
-      <ScoreHud score={score} feedback={feedback} beatFlash={beatFlash} />
+      <ScoreHud
+        score={score}
+        feedback={feedback}
+        beatFlash={beatFlash}
+        stompFlash={stompFlash}
+      />
 
       <MetronomeControls
         bpm={bpm}
         running={running}
         legsOnly={legsOnly}
+        windowMs={windowMs}
+        latencyMs={latencyMs}
         onBpmChange={setBpm}
         onToggle={() => void handleToggle()}
         onReset={handleReset}
         onLegsOnlyChange={setLegsOnly}
+        onWindowMsChange={setWindowMs}
+        onLatencyMsChange={setLatencyMs}
       />
 
       <main className="stages">

@@ -2,20 +2,28 @@ type Props = {
   bpm: number
   running: boolean
   legsOnly: boolean
+  windowMs: number
+  latencyMs: number
   onBpmChange: (bpm: number) => void
   onToggle: () => void
   onReset: () => void
   onLegsOnlyChange: (value: boolean) => void
+  onWindowMsChange: (value: number) => void
+  onLatencyMsChange: (value: number) => void
 }
 
 export function MetronomeControls({
   bpm,
   running,
   legsOnly,
+  windowMs,
+  latencyMs,
   onBpmChange,
   onToggle,
   onReset,
   onLegsOnlyChange,
+  onWindowMsChange,
+  onLatencyMsChange,
 }: Props) {
   return (
     <div className="controls">
@@ -30,6 +38,30 @@ export function MetronomeControls({
           onChange={(e) => onBpmChange(Number(e.target.value))}
         />
         <span className="bpm-value">{bpm}</span>
+      </label>
+      <label className="bpm-control">
+        <span className="bpm-label">Окно</span>
+        <input
+          type="range"
+          min={80}
+          max={350}
+          step={10}
+          value={windowMs}
+          onChange={(e) => onWindowMsChange(Number(e.target.value))}
+        />
+        <span className="bpm-value">{windowMs} мс</span>
+      </label>
+      <label className="bpm-control">
+        <span className="bpm-label">Задержка</span>
+        <input
+          type="range"
+          min={0}
+          max={250}
+          step={10}
+          value={latencyMs}
+          onChange={(e) => onLatencyMsChange(Number(e.target.value))}
+        />
+        <span className="bpm-value">{latencyMs} мс</span>
       </label>
       <label className="toggle-control">
         <input
