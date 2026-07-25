@@ -14,46 +14,69 @@ const emptyScore: ScoreSnapshot = {
   pending: 0,
   accuracy: 0,
   lastResult: null,
+  lastOffsetMs: null,
 }
 
 export default function App() {
   const [bpm, setBpm] = useState(80)
   const [running, setRunning] = useState(false)
+  const [legsOnly, setLegsOnly] = useState(false)
   const [lastBeatMs, setLastBeatMs] = useState<number | null>(null)
   const [beatIndex, setBeatIndex] = useState(0)
   const [beatFlash, setBeatFlash] = useState(false)
+  const [stompFlash, setStompFlash] = useState(false)
   const [score, setScore] = useState<ScoreSnapshot>(emptyScore)
   const [feedback, setFeedback] = useState<'hit' | 'miss' | null>(null)
 
   const metronomeRef = useRef(new Metronome())
-  const scorerRef = useRef(new Scorer(120))
+  const scorerRef = useRef(new Scorer(220, 120))
   const stompRef = useRef(new StompDetector())
+  const runningRef = useRef(false)
   const flashTimerRef = useRef(0)
   const feedbackTimerRef = useRef(0)
+  const stompFlashTimerRef = useRef(0)
 
   useEffect(() => {
     metronomeRef.current.setBpm(bpm)
   }, [bpm])
 
   useEffect(() => {
+    runningRef.current = running
+  }, [running])
+
+  useEffect(() => {
     const id = window.setInterval(() => {
-      if (!running) return
+      if (!runningRef.current) return
       const miss = scorerRef.current.tick(performance.now())
       if (miss) {
         setFeedback('miss')
         window.clearTimeout(feedbackTimerRef.current)
-        feedbackTimerRef.current = window.setTimeout(() => setFeedback(null), 400)
+        feedbackTimerRef.current = window.setTimeout(() => setFeedback(null), 450)
       }
       setScore(scorerRef.current.snapshot())
-    }, 50)
+    }, 40)
     return () => window.clearInterval(id)
-  }, [running])
+  }, [])
 
   const flashBeat = useCallback(() => {
     setBeatFlash(true)
     window.clearTimeout(flashTimerRef.current)
     flashTimerRef.current = window.setTimeout(() => setBeatFlash(false), 120)
   }, [])
+
+  const clearStats = useCallback(() => {
+    scorerRef.current.reset()
+    stompRef.current.reset()
+    setScore(emptyScore)
+    setFeedback(null)
+    setStompFlash(false)
+  }, [])
+
+  const handleReset = useCallback(() => {
+    clearStats()
+    setLastBeatMs(null)
+    setBeatIndex(0)
+  }, [clearStats])
 
   const handleToggle = useCallback(async () => {
     const metro = metronomeRef.current
@@ -64,10 +87,7 @@ export default function App() {
       return
     }
 
-    scorerRef.current.reset()
-    stompRef.current.reset()
-    setScore(emptyScore)
-    setFeedback(null)
+    clearStats()
     setLastBeatMs(null)
     setBeatIndex(0)
     metro.setBpm(bpm)
@@ -80,22 +100,27 @@ export default function App() {
       setScore(scorerRef.current.snapshot())
     })
     setRunning(true)
-  }, [bpm, flashBeat])
+  }, [bpm, flashBeat, clearStats])
 
   const handleLandmarks = useCallback(
     (landmarks: Landmark[] | null, timeMs: number) => {
-      if (!running) return
+      if (!runningRef.current) return
       const stomp = stompRef.current.update(landmarks, timeMs)
       if (!stomp) return
+
+      setStompFlash(true)
+      window.clearTimeout(stompFlashTimerRef.current)
+      stompFlashTimerRef.current = window.setTimeout(() => setStompFlash(false), 160)
+
       const result = scorerRef.current.registerStomp(stomp.timeMs)
-      if (result === 'hit') {
+      if (result) {
         setFeedback('hit')
         window.clearTimeout(feedbackTimerRef.current)
-        feedbackTimerRef.current = window.setTimeout(() => setFeedback(null), 400)
-        setScore(scorerRef.current.snapshot())
+        feedbackTimerRef.current = window.setTimeout(() => setFeedback(null), 500)
       }
+      setScore(scorerRef.current.snapshot())
     },
-    [running],
+    [],
   )
 
   useEffect(() => {
@@ -103,6 +128,7 @@ export default function App() {
       metronomeRef.current.stop()
       window.clearTimeout(flashTimerRef.current)
       window.clearTimeout(feedbackTimerRef.current)
+      window.clearTimeout(stompFlashTimerRef.current)
     }
   }, [])
 
@@ -118,8 +144,11 @@ export default function App() {
       <MetronomeControls
         bpm={bpm}
         running={running}
+        legsOnly={legsOnly}
         onBpmChange={setBpm}
         onToggle={() => void handleToggle()}
+        onReset={handleReset}
+        onLegsOnlyChange={setLegsOnly}
       />
 
       <main className="stages">
@@ -130,7 +159,12 @@ export default function App() {
           beatIndex={beatIndex}
           beatFlash={beatFlash}
         />
-        <CameraStage active={running} onLandmarks={handleLandmarks} />
+        <CameraStage
+          active={running}
+          legsOnly={legsOnly}
+          stompFlash={stompFlash}
+          onLandmarks={handleLandmarks}
+        />
       </main>
     </div>
   )

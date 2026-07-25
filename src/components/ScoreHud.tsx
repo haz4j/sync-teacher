@@ -6,6 +6,12 @@ type Props = {
   beatFlash: boolean
 }
 
+function formatOffset(offsetMs: number | null): string {
+  if (offsetMs === null) return ''
+  if (Math.abs(offsetMs) < 25) return 'точно'
+  return offsetMs < 0 ? `${Math.abs(offsetMs)} мс раньше` : `${offsetMs} мс позже`
+}
+
 export function ScoreHud({ score, feedback, beatFlash }: Props) {
   return (
     <div className="score-hud">
@@ -28,7 +34,21 @@ export function ScoreHud({ score, feedback, beatFlash }: Props) {
         className={`feedback${feedback ? ` ${feedback}` : ''}`}
         aria-live="polite"
       >
-        {feedback === 'hit' ? 'В ритм!' : feedback === 'miss' ? 'Мимо' : '\u00a0'}
+        {feedback === 'hit' ? (
+          <>
+            В ритм!
+            {score.lastOffsetMs !== null && (
+              <span className="feedback-offset">
+                {' '}
+                ({formatOffset(score.lastOffsetMs)})
+              </span>
+            )}
+          </>
+        ) : feedback === 'miss' ? (
+          'Мимо'
+        ) : (
+          '\u00a0'
+        )}
       </div>
     </div>
   )

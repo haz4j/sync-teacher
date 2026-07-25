@@ -3,19 +3,31 @@ import { createPoseLandmarker, detectPose } from '../lib/pose'
 import { drawPoseLandmarks, type Landmark } from '../lib/stickFigure'
 import type { PoseLandmarker } from '@mediapipe/tasks-vision'
 
+/** Bottom portion of the frame used in legs-only mode (normalized Y). */
+const LEGS_CROP: [number, number] = [0.35, 1]
+
 type Props = {
   active: boolean
+  legsOnly: boolean
+  stompFlash: boolean
   onLandmarks: (landmarks: Landmark[] | null, timeMs: number) => void
 }
 
-export function CameraStage({ active, onLandmarks }: Props) {
+export function CameraStage({
+  active,
+  legsOnly,
+  stompFlash,
+  onLandmarks,
+}: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const landmarkerRef = useRef<PoseLandmarker | null>(null)
   const rafRef = useRef(0)
   const lastTsRef = useRef(-1)
   const onLandmarksRef = useRef(onLandmarks)
+  const legsOnlyRef = useRef(legsOnly)
   onLandmarksRef.current = onLandmarks
+  legsOnlyRef.current = legsOnly
 
   const [error, setError] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
@@ -76,6 +88,7 @@ export function CameraStage({ active, onLandmarks }: Props) {
       const video = videoRef.current
       const canvas = canvasRef.current
       const landmarker = landmarkerRef.current
+      const crop = legsOnlyRef.current
 
       if (video && canvas && landmarker && video.readyState >= 2) {
         const dpr = window.devicePixelRatio || 1
@@ -90,10 +103,26 @@ export function CameraStage({ active, onLandmarks }: Props) {
         const ctx = canvas.getContext('2d')
         if (ctx) {
           ctx.clearRect(0, 0, w, h)
-          // Mirror video to match natural movement
           ctx.save()
           ctx.scale(-1, 1)
-          ctx.drawImage(video, -w, 0, w, h)
+          if (crop) {
+            const [y0, y1] = LEGS_CROP
+            const srcY = video.videoHeight * y0
+            const srcH = video.videoHeight * (y1 - y0)
+            ctx.drawImage(
+              video,
+              0,
+              srcY,
+              video.videoWidth,
+              srcH,
+              -w,
+              0,
+              w,
+              h,
+            )
+          } else {
+            ctx.drawImage(video, -w, 0, w, h)
+          }
           ctx.restore()
 
           let now = performance.now()
@@ -105,12 +134,15 @@ export function CameraStage({ active, onLandmarks }: Props) {
           try {
             const frame = detectPose(landmarker, video, now)
             const lm = frame.landmarks as Landmark[] | null
-            drawPoseLandmarks(ctx, lm ?? [], w, h, true)
+            drawPoseLandmarks(ctx, lm ?? [], w, h, {
+              mirror: true,
+              legsOnly: crop,
+              cropY: crop ? LEGS_CROP : undefined,
+            })
             if (active) {
               onLandmarksRef.current(lm, now)
             }
           } catch (err) {
-            // MediaPipe can throw if timestamp goes backwards; skip frame
             console.warn(err)
           }
         }
@@ -123,8 +155,14 @@ export function CameraStage({ active, onLandmarks }: Props) {
     return () => cancelAnimationFrame(rafRef.current)
   }, [ready, active])
 
+  const hint = legsOnly
+    ? 'Наведите камеру на ноги от пояса вниз. Бёдра и стопы должны быть в кадре.'
+    : 'Встаньте в кадр целиком — ноги должны быть видны. Камера примерно на уровне пояса или груди.'
+
   return (
-    <div className="stage camera-stage">
+    <div
+      className={`stage camera-stage${stompFlash ? ' stomp-flash' : ''}${legsOnly ? ' legs-only' : ''}`}
+    >
       <div className="stage-label">Вы</div>
       <video ref={videoRef} className="camera-video" playsInline muted />
       <canvas ref={canvasRef} className="stage-canvas camera-overlay" />
@@ -133,10 +171,7 @@ export function CameraStage({ active, onLandmarks }: Props) {
       )}
       {error && <div className="stage-overlay-msg error">{error}</div>}
       {!loadingPose && !error && !active && (
-        <div className="stage-hint">
-          Встаньте в кадр целиком — ноги должны быть видны. Камера примерно на уровне
-          пояса или груди.
-        </div>
+        <div className="stage-hint">{hint}</div>
       )}
     </div>
   )
