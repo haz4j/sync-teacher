@@ -13,6 +13,7 @@ export type ScoreSnapshot = {
   accuracy: number
   lastResult: 'hit' | 'miss' | null
   lastOffsetMs: number | null
+  recent: Array<'hit' | 'miss'>
 }
 
 export type HitResult = {
@@ -32,12 +33,30 @@ export class Scorer {
   private misses = 0
   private lastResult: 'hit' | 'miss' | null = null
   private lastOffsetMs: number | null = null
-  private readonly windowMs: number
-  private readonly latencyMs: number
+  private recent: Array<'hit' | 'miss'> = []
+  private windowMs: number
+  private latencyMs: number
+  private readonly recentLimit = 8
 
   constructor(windowMs = 220, latencyMs = 120) {
     this.windowMs = windowMs
     this.latencyMs = latencyMs
+  }
+
+  setWindowMs(windowMs: number) {
+    this.windowMs = Math.max(40, Math.min(400, windowMs))
+  }
+
+  setLatencyMs(latencyMs: number) {
+    this.latencyMs = Math.max(0, Math.min(300, latencyMs))
+  }
+
+  getWindowMs() {
+    return this.windowMs
+  }
+
+  getLatencyMs() {
+    return this.latencyMs
   }
 
   reset() {
@@ -46,6 +65,7 @@ export class Scorer {
     this.misses = 0
     this.lastResult = null
     this.lastOffsetMs = null
+    this.recent = []
   }
 
   addBeat(timeMs: number, index: number) {
@@ -59,7 +79,6 @@ export class Scorer {
   }
 
   registerStomp(detectedAtMs: number): HitResult | null {
-    // Compensate for camera + inference delay so matching aligns with the click.
     const timeMs = detectedAtMs - this.latencyMs
     let best: BeatRecord | null = null
     let bestDelta = Infinity
@@ -82,6 +101,7 @@ export class Scorer {
     this.hits += 1
     this.lastResult = 'hit'
     this.lastOffsetMs = offsetMs
+    this.pushRecent('hit')
     return { kind: 'hit', offsetMs }
   }
 
@@ -90,13 +110,13 @@ export class Scorer {
     let missed = false
     for (const beat of this.beats) {
       if (beat.judged) continue
-      // Allow full window after compensated time: beat + window + latency.
       if (nowMs > beat.timeMs + this.windowMs + this.latencyMs) {
         beat.judged = true
         beat.hit = false
         this.misses += 1
         this.lastResult = 'miss'
         this.lastOffsetMs = null
+        this.pushRecent('miss')
         missed = true
       }
     }
@@ -113,6 +133,14 @@ export class Scorer {
       accuracy: total === 0 ? 0 : Math.round((this.hits / total) * 100),
       lastResult: this.lastResult,
       lastOffsetMs: this.lastOffsetMs,
+      recent: [...this.recent],
+    }
+  }
+
+  private pushRecent(result: 'hit' | 'miss') {
+    this.recent.push(result)
+    if (this.recent.length > this.recentLimit) {
+      this.recent.shift()
     }
   }
 }
