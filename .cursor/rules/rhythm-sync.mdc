@@ -1,0 +1,42 @@
+---
+description: Rhythm Sync Teacher project conventions for agents
+alwaysApply: true
+---
+
+# Rhythm Sync Teacher
+
+## Product docs
+
+Before large changes, read:
+
+- `docs/spec.md` — product scope and release goals
+- `docs/architecture.md` — module boundaries and data flow
+- `docs/acceptance.md` — Definition of Done checks
+
+## Stack
+
+- Vite + React + TypeScript
+- Web Audio metronome, MediaPipe Pose (`@mediapipe/tasks-vision`)
+- No backend unless the user explicitly asks
+
+## Boundaries
+
+- Rhythm logic lives only in `src/lib/` (`metronome`, `pose`, `stompDetector`, `scorer`, `stickFigure`)
+- UI components render state and forward events; they do not compute hit/miss
+- Unit tests cover `src/lib/*` with synthetic data; do not require a real camera or MediaPipe in unit tests
+
+## Out of scope unless asked
+
+- Music upload / beat detection
+- Accounts, cloud sync, native mobile apps
+- New exercise types not listed in `docs/spec.md`
+
+## UI
+
+- Russian copy for user-facing strings
+- Keep the existing visual language (Space Grotesk / DM Sans, warm-teal palette)
+
+## Git
+
+- Do not commit or push unless the user asks
+- Prefer small commits aligned with one feature slice
