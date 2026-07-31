@@ -10,55 +10,33 @@ type Props = {
   feedback: 'hit' | 'miss' | null
 }
 
-function drawRunner(
+function drawDownArrow(
   ctx: CanvasRenderingContext2D,
   cx: number,
   groundY: number,
-  t: number,
   dpr: number,
-  active: boolean,
 ) {
-  const phase = active ? t * 0.012 : 0
-  const bob = active ? Math.sin(phase * 2) * 2 * dpr : 0
-  const leg = active ? Math.sin(phase) * 10 * dpr : 0
-  const arm = active ? Math.sin(phase + Math.PI) * 8 * dpr : 0
-
-  const hipY = groundY - 28 * dpr + bob
-  const headY = hipY - 36 * dpr
-  const stroke = 3 * dpr
+  const tipY = groundY - 2 * dpr
+  const topY = tipY - 36 * dpr
+  const head = 7 * dpr
 
   ctx.save()
   ctx.strokeStyle = '#1a1a1a'
-  ctx.fillStyle = '#1a1a1a'
-  ctx.lineWidth = stroke
+  ctx.lineWidth = 1.5 * dpr
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
 
-  // head
+  // shaft
   ctx.beginPath()
-  ctx.arc(cx, headY, 7 * dpr, 0, Math.PI * 2)
+  ctx.moveTo(cx, topY)
+  ctx.lineTo(cx, tipY)
   ctx.stroke()
 
-  // torso
+  // arrow head
   ctx.beginPath()
-  ctx.moveTo(cx, headY + 7 * dpr)
-  ctx.lineTo(cx, hipY)
-  ctx.stroke()
-
-  // arms
-  ctx.beginPath()
-  ctx.moveTo(cx, headY + 14 * dpr)
-  ctx.lineTo(cx - 12 * dpr - arm * 0.3, headY + 26 * dpr + arm * 0.2)
-  ctx.moveTo(cx, headY + 14 * dpr)
-  ctx.lineTo(cx + 12 * dpr + arm * 0.3, headY + 26 * dpr - arm * 0.2)
-  ctx.stroke()
-
-  // legs
-  ctx.beginPath()
-  ctx.moveTo(cx, hipY)
-  ctx.lineTo(cx - 8 * dpr - leg * 0.4, groundY - Math.max(0, leg * 0.15))
-  ctx.moveTo(cx, hipY)
-  ctx.lineTo(cx + 8 * dpr + leg * 0.4, groundY - Math.max(0, -leg * 0.15))
+  ctx.moveTo(cx - head, tipY - head)
+  ctx.lineTo(cx, tipY)
+  ctx.lineTo(cx + head, tipY - head)
   ctx.stroke()
 
   ctx.restore()
@@ -146,7 +124,7 @@ export function BeatLane({
         }
       }
 
-      drawRunner(ctx, centerX, groundY, now, dpr, isRun)
+      drawDownArrow(ctx, centerX, groundY, dpr)
 
       rafRef.current = requestAnimationFrame(draw)
     }

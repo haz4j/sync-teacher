@@ -5,7 +5,7 @@
 export const settings = {
   bpm: {
     default: 80,
-    min: 20,
+    min: 10,
     max: 140,
   },
   /** Hit timing window around each beat (± conceptually applied as full width). */
