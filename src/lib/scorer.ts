@@ -1,3 +1,5 @@
+import { settings } from '../config'
+
 export type BeatRecord = {
   timeMs: number
   index: number
@@ -44,17 +46,26 @@ export class Scorer {
   private latencyMs: number
   private readonly recentLimit = 8
 
-  constructor(windowMs = 220, latencyMs = 120) {
+  constructor(
+    windowMs = settings.windowMs.default,
+    latencyMs = settings.latencyMs.default,
+  ) {
     this.windowMs = windowMs
     this.latencyMs = latencyMs
   }
 
   setWindowMs(windowMs: number) {
-    this.windowMs = Math.max(40, Math.min(400, windowMs))
+    this.windowMs = Math.max(
+      settings.windowMs.min,
+      Math.min(settings.windowMs.max, windowMs),
+    )
   }
 
   setLatencyMs(latencyMs: number) {
-    this.latencyMs = Math.max(0, Math.min(300, latencyMs))
+    this.latencyMs = Math.max(
+      settings.latencyMs.min,
+      Math.min(settings.latencyMs.max, latencyMs),
+    )
   }
 
   getWindowMs() {

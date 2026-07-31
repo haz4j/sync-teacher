@@ -1,4 +1,6 @@
+import { settings } from './config'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { BeatLane } from './components/BeatLane'
 import { CameraStage } from './components/CameraStage'
 import { MetronomeControls } from './components/MetronomeControls'
 import { ScoreHud } from './components/ScoreHud'
@@ -19,9 +21,9 @@ const emptyScore: ScoreSnapshot = {
 }
 
 export default function App() {
-  const [bpm, setBpm] = useState(80)
-  const [windowMs, setWindowMs] = useState(220)
-  const [latencyMs, setLatencyMs] = useState(120)
+  const [bpm, setBpm] = useState(settings.bpm.default)
+  const [windowMs, setWindowMs] = useState(settings.windowMs.default)
+  const [latencyMs, setLatencyMs] = useState(settings.latencyMs.default)
   const [running, setRunning] = useState(false)
   const [lastBeatMs, setLastBeatMs] = useState<number | null>(null)
   const [beatIndex, setBeatIndex] = useState(0)
@@ -30,9 +32,12 @@ export default function App() {
   const [score, setScore] = useState<ScoreSnapshot>(emptyScore)
   const [feedback, setFeedback] = useState<'hit' | 'miss' | null>(null)
   const [footMarker, setFootMarker] = useState<FootMarker | null>(null)
+  const [laneOriginMs, setLaneOriginMs] = useState<number | null>(null)
 
   const metronomeRef = useRef(new Metronome())
-  const scorerRef = useRef(new Scorer(220, 120))
+  const scorerRef = useRef(
+    new Scorer(settings.windowMs.default, settings.latencyMs.default),
+  )
   const stompRef = useRef(new StompDetector())
   const runningRef = useRef(false)
   const flashTimerRef = useRef(0)
@@ -118,6 +123,7 @@ export default function App() {
       setRunning(false)
       setBeatFlash(false)
       setFootMarker(null)
+      setLaneOriginMs(null)
       return
     }
 
@@ -133,7 +139,7 @@ export default function App() {
       flashBeat()
       setScore(scorerRef.current.snapshot())
     })
-    // Visual pickup aligned to first click: one full beat of lift before plant.
+    setLaneOriginMs(firstBeatMs)
     setLastBeatMs(firstBeatMs - 60000 / bpm)
     setBeatIndex(0)
     setRunning(true)
@@ -220,6 +226,14 @@ export default function App() {
           onLandmarks={handleLandmarks}
         />
       </main>
+
+      <BeatLane
+        bpm={bpm}
+        windowMs={windowMs}
+        running={running}
+        laneOriginMs={laneOriginMs}
+        feedback={feedback}
+      />
     </div>
   )
 }

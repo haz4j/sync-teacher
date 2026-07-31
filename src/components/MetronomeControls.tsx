@@ -1,3 +1,5 @@
+import { settings } from '../config'
+
 type Props = {
   bpm: number
   running: boolean
@@ -27,8 +29,8 @@ export function MetronomeControls({
         <span className="bpm-label">BPM</span>
         <input
           type="range"
-          min={20}
-          max={140}
+          min={settings.bpm.min}
+          max={settings.bpm.max}
           step={1}
           value={bpm}
           onChange={(e) => onBpmChange(Number(e.target.value))}
@@ -39,9 +41,9 @@ export function MetronomeControls({
         <span className="bpm-label">Окно</span>
         <input
           type="range"
-          min={80}
-          max={350}
-          step={10}
+          min={settings.windowMs.min}
+          max={settings.windowMs.max}
+          step={settings.windowMs.step}
           value={windowMs}
           onChange={(e) => onWindowMsChange(Number(e.target.value))}
         />
@@ -51,9 +53,9 @@ export function MetronomeControls({
         <span className="bpm-label">Задержка</span>
         <input
           type="range"
-          min={0}
-          max={250}
-          step={10}
+          min={settings.latencyMs.min}
+          max={settings.latencyMs.max}
+          step={settings.latencyMs.step}
           value={latencyMs}
           onChange={(e) => onLatencyMsChange(Number(e.target.value))}
         />

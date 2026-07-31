@@ -1,3 +1,5 @@
+import { metronomeBpm, settings } from '../config'
+
 export type BeatCallback = (beatTimeMs: number, beatIndex: number) => void
 
 /**
@@ -10,14 +12,14 @@ export class Metronome {
   private timerId: number | null = null
   private beatIndex = 0
   private running = false
-  private bpm = 80
+  private bpm = settings.bpm.default
   private onBeat: BeatCallback | null = null
 
   private readonly lookaheadMs = 25
   private readonly scheduleAheadSec = 0.1
 
   setBpm(bpm: number) {
-    this.bpm = Math.max(20, Math.min(200, bpm))
+    this.bpm = Math.max(metronomeBpm.min, Math.min(metronomeBpm.max, bpm))
   }
 
   getBpm() {
