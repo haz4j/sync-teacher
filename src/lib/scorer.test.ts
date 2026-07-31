@@ -17,19 +17,28 @@ describe('Scorer', () => {
     expect(snap.recent).toEqual(['hit'])
   })
 
+  it('treats windowMs as full span (half on each side of the beat)', () => {
+    const scorer = new Scorer(100, 0)
+    scorer.addBeat(1000, 0)
+    // |offset| 49 <= 50 → hit
+    expect(scorer.registerStomp(1049)?.kind).toBe('hit')
+  })
+
   it('rejects stomps outside the timing window', () => {
     const scorer = new Scorer(100, 0)
     scorer.addBeat(1000, 0)
+    // |offset| 300 > 50 → miss window
     expect(scorer.registerStomp(1300)).toBeNull()
     expect(scorer.snapshot().hits).toBe(0)
   })
 
-  it('marks expired beats as misses', () => {
+  it('marks expired beats as misses at the late edge (+ latency)', () => {
+    // full window 100 → half 50; latency 50 → miss after 1100
     const scorer = new Scorer(100, 50)
     scorer.addBeat(1000, 0)
 
-    expect(scorer.tick(1149)).toBeNull()
-    expect(scorer.tick(1151)).toEqual({ kind: 'miss', beatIndex: 0 })
+    expect(scorer.tick(1099)).toBeNull()
+    expect(scorer.tick(1101)).toEqual({ kind: 'miss', beatIndex: 0 })
 
     const snap = scorer.snapshot()
     expect(snap.misses).toBe(1)
@@ -64,10 +73,10 @@ describe('Scorer', () => {
 
   it('applies updated window and latency to later judgments', () => {
     const scorer = new Scorer(50, 0)
-    scorer.setWindowMs(200)
+    scorer.setWindowMs(200) // half = 100
     scorer.setLatencyMs(100)
     scorer.addBeat(1000, 0)
-    // detected 1150 → compensated 1050 → delta 50 within window 200
+    // detected 1150 → compensated 1050 → delta 50 within half 100
     expect(scorer.registerStomp(1150)?.kind).toBe('hit')
   })
 })

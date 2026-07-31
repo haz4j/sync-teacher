@@ -33,6 +33,7 @@ export default function App() {
   const [feedback, setFeedback] = useState<'hit' | 'miss' | null>(null)
   const [footMarker, setFootMarker] = useState<FootMarker | null>(null)
   const [laneOriginMs, setLaneOriginMs] = useState<number | null>(null)
+  const [beatTimes, setBeatTimes] = useState<number[]>([])
 
   const metronomeRef = useRef(new Metronome())
   const scorerRef = useRef(
@@ -124,16 +125,19 @@ export default function App() {
       setBeatFlash(false)
       setFootMarker(null)
       setLaneOriginMs(null)
+      setBeatTimes([])
       return
     }
 
     clearStats()
+    setBeatTimes([])
     metro.setBpm(bpm)
     scorerRef.current.setWindowMs(windowMs)
     scorerRef.current.setLatencyMs(latencyMs)
 
     const firstBeatMs = await metro.start((beatTimeMs, index) => {
       scorerRef.current.addBeat(beatTimeMs, index)
+      setBeatTimes((prev) => [...prev, beatTimeMs])
       setLastBeatMs(beatTimeMs)
       setBeatIndex(index)
       flashBeat()
@@ -230,8 +234,10 @@ export default function App() {
       <BeatLane
         bpm={bpm}
         windowMs={windowMs}
+        latencyMs={latencyMs}
         running={running}
         laneOriginMs={laneOriginMs}
+        beatTimes={beatTimes}
         feedback={feedback}
       />
     </div>

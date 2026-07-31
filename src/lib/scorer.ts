@@ -32,8 +32,9 @@ export type MissResult = {
 /**
  * Matches stomps to beats within a timing window.
  *
- * Webcam pose is delayed vs audio, so stomps are matched with a latency
- * compensation (treated as earlier than the detection timestamp).
+ * `windowMs` is the FULL valid span (same as beat-lane platform width):
+ * earliest = beat - window/2, latest = beat + window/2.
+ * Webcam delay is removed via latencyMs before comparing.
  */
 export class Scorer {
   private beats: BeatRecord[] = []
@@ -76,6 +77,11 @@ export class Scorer {
     return this.latencyMs
   }
 
+  /** Half of Окно — max |offset| from the beat center. */
+  private halfWindowMs() {
+    return this.windowMs / 2
+  }
+
   reset() {
     this.beats = []
     this.hits = 0
@@ -97,13 +103,14 @@ export class Scorer {
 
   registerStomp(detectedAtMs: number): HitResult | null {
     const timeMs = detectedAtMs - this.latencyMs
+    const half = this.halfWindowMs()
     let best: BeatRecord | null = null
     let bestDelta = Infinity
 
     for (const beat of this.beats) {
       if (beat.judged) continue
       const delta = Math.abs(timeMs - beat.timeMs)
-      if (delta <= this.windowMs && delta < bestDelta) {
+      if (delta <= half && delta < bestDelta) {
         best = beat
         bestDelta = delta
       }
@@ -122,12 +129,17 @@ export class Scorer {
     return { kind: 'hit', beatIndex: best.index, offsetMs }
   }
 
-  /** Call periodically to mark beats whose window expired without a stomp. */
+  /**
+   * Mark beats whose late edge has passed.
+   * Late edge = beat + window/2; +latency waits for late camera frames.
+   * That matches the arrow leaving the right side of the platform (+latency).
+   */
   tick(nowMs: number): MissResult | null {
     let lastMiss: MissResult | null = null
+    const half = this.halfWindowMs()
     for (const beat of this.beats) {
       if (beat.judged) continue
-      if (nowMs > beat.timeMs + this.windowMs + this.latencyMs) {
+      if (nowMs > beat.timeMs + half + this.latencyMs) {
         beat.judged = true
         beat.hit = false
         this.misses += 1

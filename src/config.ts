@@ -8,7 +8,7 @@ export const settings = {
     min: 10,
     max: 140,
   },
-  /** Hit timing window around each beat (± conceptually applied as full width). */
+  /** Hit timing window: full valid span under the arrow (platform width). */
   windowMs: {
     default: 220,
     min: 80,
@@ -30,7 +30,7 @@ export const metronomeBpm = {
   max: 200,
 }
 
-/** Runner lane: pixels spanned by one beat interval. */
+/** Runner lane: base pixels spanned by one beat (may grow at low BPM for readability). */
 export const beatLane = {
-  pxPerBeat: 140,
+  pxPerBeat: 220,
 }
