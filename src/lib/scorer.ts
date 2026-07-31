@@ -18,7 +18,13 @@ export type ScoreSnapshot = {
 
 export type HitResult = {
   kind: 'hit'
+  beatIndex: number
   offsetMs: number
+}
+
+export type MissResult = {
+  kind: 'miss'
+  beatIndex: number
 }
 
 /**
@@ -102,12 +108,12 @@ export class Scorer {
     this.lastResult = 'hit'
     this.lastOffsetMs = offsetMs
     this.pushRecent('hit')
-    return { kind: 'hit', offsetMs }
+    return { kind: 'hit', beatIndex: best.index, offsetMs }
   }
 
   /** Call periodically to mark beats whose window expired without a stomp. */
-  tick(nowMs: number): 'miss' | null {
-    let missed = false
+  tick(nowMs: number): MissResult | null {
+    let lastMiss: MissResult | null = null
     for (const beat of this.beats) {
       if (beat.judged) continue
       if (nowMs > beat.timeMs + this.windowMs + this.latencyMs) {
@@ -117,10 +123,10 @@ export class Scorer {
         this.lastResult = 'miss'
         this.lastOffsetMs = null
         this.pushRecent('miss')
-        missed = true
+        lastMiss = { kind: 'miss', beatIndex: beat.index }
       }
     }
-    return missed ? 'miss' : null
+    return lastMiss
   }
 
   snapshot(): ScoreSnapshot {

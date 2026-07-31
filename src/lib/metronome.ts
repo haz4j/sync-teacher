@@ -17,7 +17,7 @@ export class Metronome {
   private readonly scheduleAheadSec = 0.1
 
   setBpm(bpm: number) {
-    this.bpm = Math.max(40, Math.min(200, bpm))
+    this.bpm = Math.max(20, Math.min(200, bpm))
   }
 
   getBpm() {
@@ -28,7 +28,7 @@ export class Metronome {
     return this.running
   }
 
-  async start(onBeat: BeatCallback) {
+  async start(onBeat: BeatCallback): Promise<number> {
     this.onBeat = onBeat
     if (!this.ctx) {
       this.ctx = new AudioContext()
@@ -39,8 +39,11 @@ export class Metronome {
 
     this.running = true
     this.beatIndex = 0
-    this.nextBeatAt = this.ctx.currentTime + 0.05
+    // One full beat of pickup so the first stomp lift scales with BPM.
+    const firstBeatAt = this.ctx.currentTime + 60 / this.bpm
+    this.nextBeatAt = firstBeatAt
     this.scheduler()
+    return this.audioTimeToPerfMs(firstBeatAt)
   }
 
   stop() {

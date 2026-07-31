@@ -8,7 +8,7 @@ describe('Scorer', () => {
 
     // Detected at 1120 → compensated 1000 → exact hit
     const result = scorer.registerStomp(1120)
-    expect(result).toEqual({ kind: 'hit', offsetMs: 0 })
+    expect(result).toEqual({ kind: 'hit', beatIndex: 0, offsetMs: 0 })
 
     const snap = scorer.snapshot()
     expect(snap.hits).toBe(1)
@@ -29,7 +29,7 @@ describe('Scorer', () => {
     scorer.addBeat(1000, 0)
 
     expect(scorer.tick(1149)).toBeNull()
-    expect(scorer.tick(1151)).toBe('miss')
+    expect(scorer.tick(1151)).toEqual({ kind: 'miss', beatIndex: 0 })
 
     const snap = scorer.snapshot()
     expect(snap.misses).toBe(1)

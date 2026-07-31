@@ -27,7 +27,7 @@ export function MetronomeControls({
         <span className="bpm-label">BPM</span>
         <input
           type="range"
-          min={60}
+          min={20}
           max={140}
           step={1}
           value={bpm}

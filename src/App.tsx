@@ -6,7 +6,7 @@ import { TeacherFigure } from './components/TeacherFigure'
 import { Metronome } from './lib/metronome'
 import { Scorer, type ScoreSnapshot } from './lib/scorer'
 import { StompDetector } from './lib/stompDetector'
-import type { Landmark } from './lib/stickFigure'
+import { FOOT_BURST_MS, teacherFootForBeat, teacherPoseAt, type FootMarker, type Landmark } from './lib/stickFigure'
 
 const emptyScore: ScoreSnapshot = {
   hits: 0,
@@ -29,6 +29,7 @@ export default function App() {
   const [stompFlash, setStompFlash] = useState(false)
   const [score, setScore] = useState<ScoreSnapshot>(emptyScore)
   const [feedback, setFeedback] = useState<'hit' | 'miss' | null>(null)
+  const [footMarker, setFootMarker] = useState<FootMarker | null>(null)
 
   const metronomeRef = useRef(new Metronome())
   const scorerRef = useRef(new Scorer(220, 120))
@@ -37,6 +38,7 @@ export default function App() {
   const flashTimerRef = useRef(0)
   const feedbackTimerRef = useRef(0)
   const stompFlashTimerRef = useRef(0)
+  const footMarkerTimerRef = useRef(0)
 
   useEffect(() => {
     metronomeRef.current.setBpm(bpm)
@@ -54,19 +56,38 @@ export default function App() {
     runningRef.current = running
   }, [running])
 
+  const showFootResult = useCallback((kind: 'hit' | 'miss', beatIdx: number) => {
+    const side = teacherFootForBeat(beatIdx)
+    const pose = teacherPoseAt(0, beatIdx)
+    const ankle = side === 'left' ? pose.leftAnkle : pose.rightAnkle
+    setFootMarker({
+      side,
+      kind,
+      startedAt: performance.now(),
+      x: ankle.x,
+      y: ankle.y,
+    })
+    window.clearTimeout(footMarkerTimerRef.current)
+    footMarkerTimerRef.current = window.setTimeout(
+      () => setFootMarker(null),
+      FOOT_BURST_MS + 20,
+    )
+  }, [])
+
   useEffect(() => {
     const id = window.setInterval(() => {
       if (!runningRef.current) return
       const miss = scorerRef.current.tick(performance.now())
       if (miss) {
         setFeedback('miss')
+        showFootResult('miss', miss.beatIndex)
         window.clearTimeout(feedbackTimerRef.current)
         feedbackTimerRef.current = window.setTimeout(() => setFeedback(null), 450)
       }
       setScore(scorerRef.current.snapshot())
     }, 40)
     return () => window.clearInterval(id)
-  }, [])
+  }, [showFootResult])
 
   const flashBeat = useCallback(() => {
     setBeatFlash(true)
@@ -80,6 +101,8 @@ export default function App() {
     setScore(emptyScore)
     setFeedback(null)
     setStompFlash(false)
+    setFootMarker(null)
+    window.clearTimeout(footMarkerTimerRef.current)
   }, [])
 
   const handleReset = useCallback(() => {
@@ -94,23 +117,25 @@ export default function App() {
       metro.stop()
       setRunning(false)
       setBeatFlash(false)
+      setFootMarker(null)
       return
     }
 
     clearStats()
-    setLastBeatMs(null)
-    setBeatIndex(0)
     metro.setBpm(bpm)
     scorerRef.current.setWindowMs(windowMs)
     scorerRef.current.setLatencyMs(latencyMs)
 
-    await metro.start((beatTimeMs, index) => {
+    const firstBeatMs = await metro.start((beatTimeMs, index) => {
       scorerRef.current.addBeat(beatTimeMs, index)
       setLastBeatMs(beatTimeMs)
       setBeatIndex(index)
       flashBeat()
       setScore(scorerRef.current.snapshot())
     })
+    // Visual pickup aligned to first click: one full beat of lift before plant.
+    setLastBeatMs(firstBeatMs - 60000 / bpm)
+    setBeatIndex(0)
     setRunning(true)
   }, [bpm, windowMs, latencyMs, flashBeat, clearStats])
 
@@ -127,12 +152,13 @@ export default function App() {
       const result = scorerRef.current.registerStomp(stomp.timeMs)
       if (result) {
         setFeedback('hit')
+        showFootResult('hit', result.beatIndex)
         window.clearTimeout(feedbackTimerRef.current)
         feedbackTimerRef.current = window.setTimeout(() => setFeedback(null), 500)
       }
       setScore(scorerRef.current.snapshot())
     },
-    [],
+    [showFootResult],
   )
 
   useEffect(() => {
@@ -141,11 +167,18 @@ export default function App() {
       window.clearTimeout(flashTimerRef.current)
       window.clearTimeout(feedbackTimerRef.current)
       window.clearTimeout(stompFlashTimerRef.current)
+      window.clearTimeout(footMarkerTimerRef.current)
     }
   }, [])
 
   return (
-    <div className="app">
+    <div
+      className={`app${footMarker ? ` screen-tint-${footMarker.kind}` : ''}`}
+    >
+      <div
+        className={`screen-tint${footMarker ? ` on ${footMarker.kind}` : ''}`}
+        aria-hidden
+      />
       <aside className="sidebar">
         <header className="header">
           <h1 className="brand">Rhythm Sync</h1>
@@ -179,6 +212,7 @@ export default function App() {
           lastBeatMs={lastBeatMs}
           beatIndex={beatIndex}
           beatFlash={beatFlash}
+          footMarker={footMarker}
         />
         <CameraStage
           active={running}

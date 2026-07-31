@@ -1,5 +1,10 @@
 import { useEffect, useRef } from 'react'
-import { drawStickFigure, teacherPoseAt } from '../lib/stickFigure'
+import {
+  drawFootBurst,
+  drawStickFigure,
+  teacherPoseAt,
+  type FootMarker,
+} from '../lib/stickFigure'
 
 type Props = {
   running: boolean
@@ -7,6 +12,7 @@ type Props = {
   lastBeatMs: number | null
   beatIndex: number
   beatFlash: boolean
+  footMarker: FootMarker | null
 }
 
 export function TeacherFigure({
@@ -15,9 +21,12 @@ export function TeacherFigure({
   lastBeatMs,
   beatIndex,
   beatFlash,
+  footMarker,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef = useRef(0)
+  const markerRef = useRef(footMarker)
+  markerRef.current = footMarker
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -37,7 +46,6 @@ export function TeacherFigure({
 
       ctx.clearRect(0, 0, w, h)
 
-      // Soft ground line
       ctx.strokeStyle = 'rgba(26, 26, 26, 0.15)'
       ctx.lineWidth = 2 * dpr
       ctx.beginPath()
@@ -53,10 +61,15 @@ export function TeacherFigure({
 
       const pose = teacherPoseAt(progress, beatIndex)
       drawStickFigure(ctx, pose, w, h, {
-        color: beatFlash ? '#e85d04' : '#1a1a1a',
+        color: '#1a1a1a',
         lineWidth: 5 * dpr,
         headRadius: 0.048,
       })
+
+      const marker = markerRef.current
+      if (marker) {
+        drawFootBurst(ctx, w, h, marker, performance.now(), dpr)
+      }
 
       rafRef.current = requestAnimationFrame(draw)
     }

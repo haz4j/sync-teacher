@@ -46,6 +46,27 @@ body {
   padding: 1rem;
   max-width: none;
   margin: 0;
+  position: relative;
+}
+
+.screen-tint {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  opacity: 0;
+}
+
+.screen-tint.on {
+  opacity: 1;
+}
+
+.screen-tint.hit {
+  background: rgba(42, 157, 143, 0.14);
+}
+
+.screen-tint.miss {
+  background: rgba(193, 18, 31, 0.14);
 }
 
 .sidebar {

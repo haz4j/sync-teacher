@@ -41,30 +41,35 @@ const BASE: StickPose = {
  * Stomp animation phase: 0 = standing, 1 = foot fully down at beat.
  * Uses alternating feet; phase derived from progress within the beat interval.
  */
+export function teacherFootForBeat(beatIndex: number): 'left' | 'right' {
+  return beatIndex % 2 === 0 ? 'left' : 'right'
+}
+
 export function teacherPoseAt(beatProgress: number, beatIndex: number): StickPose {
   const pose: StickPose = structuredClone(BASE)
-  const leftFoot = beatIndex % 2 === 0
+  const leftFoot = teacherFootForBeat(beatIndex) === 'left'
+  const groundY = BASE.leftAnkle.y
 
-  // Ease: lift before beat, strike at beat (progress≈0), settle after.
   // beatProgress is 0 at beat, increases toward 1 until next beat.
-  const strike = Math.max(0, 1 - beatProgress * 4) // sharp down near beat
+  // Lift the foot between beats; at the beat it plants exactly on the ground (never below).
+  const strike = Math.max(0, 1 - beatProgress * 4)
   const lift = Math.sin(Math.min(1, beatProgress) * Math.PI) * 0.08
 
   if (leftFoot) {
-    pose.leftKnee.y = BASE.leftKnee.y - lift * 0.6 + strike * 0.02
-    pose.leftAnkle.y = BASE.leftAnkle.y - lift + strike * 0.04
-    pose.leftAnkle.x = BASE.leftAnkle.x - strike * 0.01
+    pose.leftKnee.y = BASE.leftKnee.y - lift * 0.6
+    pose.leftAnkle.y = Math.min(groundY, BASE.leftAnkle.y - lift)
   } else {
-    pose.rightKnee.y = BASE.rightKnee.y - lift * 0.6 + strike * 0.02
-    pose.rightAnkle.y = BASE.rightAnkle.y - lift + strike * 0.04
-    pose.rightAnkle.x = BASE.rightAnkle.x + strike * 0.01
+    pose.rightKnee.y = BASE.rightKnee.y - lift * 0.6
+    pose.rightAnkle.y = Math.min(groundY, BASE.rightAnkle.y - lift)
   }
 
-  // Subtle body bounce on strike
-  const bounce = strike * 0.015
+  // Subtle body bounce on strike (compress down, feet stay on floor)
+  const bounce = strike * 0.012
   pose.head.y += bounce
   pose.neck.y += bounce
   pose.hip.y += bounce
+  pose.leftHip.y += bounce
+  pose.rightHip.y += bounce
   pose.leftShoulder.y += bounce
   pose.rightShoulder.y += bounce
 
@@ -121,6 +126,79 @@ export function drawStickFigure(
   ctx.stroke()
 
   ctx.restore()
+}
+
+export type FootMarker = {
+  side: 'left' | 'right'
+  kind: 'hit' | 'miss'
+  /** performance.now() when the burst started */
+  startedAt: number
+  /** Fixed normalized position — does not follow the animated ankle. */
+  x: number
+  y: number
+}
+
+export const FOOT_BURST_MS = 450
+
+/**
+ * Small instant burst at a fixed foot spot.
+ * Starts at full (small) size, then shrinks + fades. Center never moves.
+ */
+export function drawFootBurst(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  marker: FootMarker,
+  nowMs: number,
+  dpr = 1,
+) {
+  const age = nowMs - marker.startedAt
+  if (age < 0 || age > FOOT_BURST_MS) return
+
+  const t = age / FOOT_BURST_MS
+  const fade = 1 - t
+  const shrink = Math.pow(1 - t, 1.2)
+  const x = marker.x * width
+  const y = marker.y * height
+  const color = marker.kind === 'hit' ? '42, 157, 143' : '193, 18, 31'
+  // Compact burst around the stomp point
+  const maxR = 18 * dpr
+  const r = Math.max(1, maxR * shrink)
+
+  ctx.save()
+
+  const glow = ctx.createRadialGradient(x, y, 0, x, y, r)
+  glow.addColorStop(0, `rgba(${color}, ${0.95 * fade})`)
+  glow.addColorStop(0.55, `rgba(${color}, ${0.45 * fade})`)
+  glow.addColorStop(1, `rgba(${color}, 0)`)
+  ctx.fillStyle = glow
+  ctx.beginPath()
+  ctx.arc(x, y, r, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.strokeStyle = `rgba(${color}, ${0.9 * fade})`
+  ctx.lineWidth = Math.max(1.2 * dpr, 2.5 * dpr * fade)
+  ctx.beginPath()
+  ctx.arc(x, y, r * 0.85, 0, Math.PI * 2)
+  ctx.stroke()
+
+  const sparks = 8
+  for (let i = 0; i < sparks; i++) {
+    const angle = (i / sparks) * Math.PI * 2
+    const dist = r * 0.55
+    const px = x + Math.cos(angle) * dist
+    const py = y + Math.sin(angle) * dist
+    ctx.fillStyle = `rgba(${color}, ${0.9 * fade})`
+    ctx.beginPath()
+    ctx.arc(px, py, Math.max(0.7 * dpr, 2 * dpr * shrink), 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  ctx.restore()
+}
+
+export function isFootBurstActive(marker: FootMarker, nowMs: number) {
+  return nowMs - marker.startedAt <= FOOT_BURST_MS
 }
 
 /** MediaPipe Pose landmark indices used for overlay. */
