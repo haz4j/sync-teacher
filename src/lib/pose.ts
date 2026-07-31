@@ -22,9 +22,10 @@ export async function createPoseLandmarker(): Promise<PoseLandmarker> {
         },
         runningMode: 'VIDEO',
         numPoses: 1,
-        minPoseDetectionConfidence: 0.5,
-        minPosePresenceConfidence: 0.5,
-        minTrackingConfidence: 0.5,
+        // Lower thresholds so legs-only framing still tracks hips/ankles.
+        minPoseDetectionConfidence: 0.35,
+        minPosePresenceConfidence: 0.35,
+        minTrackingConfidence: 0.35,
       })
     })()
   }

@@ -69,7 +69,7 @@ export class StompDetector {
     const ankle = landmarks[ankleIdx]
     const foot = landmarks[footIdx]
     const candidates = [ankle, foot].filter(
-      (lm): lm is Landmark => !!lm && (lm.visibility ?? 1) >= 0.35,
+      (lm): lm is Landmark => !!lm && (lm.visibility ?? 1) >= 0.2,
     )
     if (!candidates.length) return null
     return Math.max(...candidates.map((lm) => lm.y))

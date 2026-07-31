@@ -23,7 +23,6 @@ export default function App() {
   const [windowMs, setWindowMs] = useState(220)
   const [latencyMs, setLatencyMs] = useState(120)
   const [running, setRunning] = useState(false)
-  const [legsOnly, setLegsOnly] = useState(false)
   const [lastBeatMs, setLastBeatMs] = useState<number | null>(null)
   const [beatIndex, setBeatIndex] = useState(0)
   const [beatFlash, setBeatFlash] = useState(false)
@@ -147,31 +146,31 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="header">
-        <h1 className="brand">Rhythm Sync</h1>
-        <p className="tagline">Топайте ногой в такт метроному</p>
-      </header>
+      <aside className="sidebar">
+        <header className="header">
+          <h1 className="brand">Rhythm Sync</h1>
+          <p className="tagline">Топайте ногой в такт метроному</p>
+        </header>
 
-      <ScoreHud
-        score={score}
-        feedback={feedback}
-        beatFlash={beatFlash}
-        stompFlash={stompFlash}
-      />
+        <ScoreHud
+          score={score}
+          feedback={feedback}
+          beatFlash={beatFlash}
+          stompFlash={stompFlash}
+        />
 
-      <MetronomeControls
-        bpm={bpm}
-        running={running}
-        legsOnly={legsOnly}
-        windowMs={windowMs}
-        latencyMs={latencyMs}
-        onBpmChange={setBpm}
-        onToggle={() => void handleToggle()}
-        onReset={handleReset}
-        onLegsOnlyChange={setLegsOnly}
-        onWindowMsChange={setWindowMs}
-        onLatencyMsChange={setLatencyMs}
-      />
+        <MetronomeControls
+          bpm={bpm}
+          running={running}
+          windowMs={windowMs}
+          latencyMs={latencyMs}
+          onBpmChange={setBpm}
+          onToggle={() => void handleToggle()}
+          onReset={handleReset}
+          onWindowMsChange={setWindowMs}
+          onLatencyMsChange={setLatencyMs}
+        />
+      </aside>
 
       <main className="stages">
         <TeacherFigure
@@ -183,7 +182,6 @@ export default function App() {
         />
         <CameraStage
           active={running}
-          legsOnly={legsOnly}
           stompFlash={stompFlash}
           onLandmarks={handleLandmarks}
         />

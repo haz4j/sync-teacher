@@ -141,26 +141,10 @@ export const POSE_CONNECTIONS: Array<[number, number]> = [
   [28, 32],
 ]
 
-/** Lower body only (hips → feet). */
-export const LEGS_CONNECTIONS: Array<[number, number]> = [
-  [23, 24],
-  [23, 25],
-  [25, 27],
-  [27, 31],
-  [24, 26],
-  [26, 28],
-  [28, 32],
-]
-
-const LEG_LANDMARK_INDEXES = new Set([23, 24, 25, 26, 27, 28, 29, 30, 31, 32])
-
 export type Landmark = { x: number; y: number; z?: number; visibility?: number }
 
 export type DrawPoseOptions = {
   mirror?: boolean
-  /** Crop normalized image Y range [y0, y1] into the full canvas (legs-only zoom). */
-  cropY?: [number, number]
-  legsOnly?: boolean
 }
 
 export function drawPoseLandmarks(
@@ -175,20 +159,11 @@ export function drawPoseLandmarks(
   const opts: DrawPoseOptions =
     typeof options === 'boolean' ? { mirror: options } : options
   const mirror = opts.mirror ?? true
-  const cropY = opts.cropY
-  const connections = opts.legsOnly ? LEGS_CONNECTIONS : POSE_CONNECTIONS
 
-  const map = (lm: Landmark) => {
-    let y = lm.y
-    if (cropY) {
-      const [y0, y1] = cropY
-      y = (lm.y - y0) / (y1 - y0)
-    }
-    return {
-      x: (mirror ? 1 - lm.x : lm.x) * width,
-      y: y * height,
-    }
-  }
+  const map = (lm: Landmark) => ({
+    x: (mirror ? 1 - lm.x : lm.x) * width,
+    y: lm.y * height,
+  })
 
   ctx.save()
   ctx.strokeStyle = 'rgba(46, 196, 182, 0.9)'
@@ -196,31 +171,27 @@ export function drawPoseLandmarks(
   ctx.lineWidth = 3
   ctx.lineCap = 'round'
 
-  for (const [i, j] of connections) {
+  for (const [i, j] of POSE_CONNECTIONS) {
     const a = landmarks[i]
     const b = landmarks[j]
     if (!a || !b) continue
-    if ((a.visibility ?? 1) < 0.35 || (b.visibility ?? 1) < 0.35) continue
+    // Soft threshold: partial body (legs only) still draws.
+    if ((a.visibility ?? 1) < 0.2 || (b.visibility ?? 1) < 0.2) continue
     const pa = map(a)
     const pb = map(b)
-    if (cropY && (pa.y < -20 || pa.y > height + 20 || pb.y < -20 || pb.y > height + 20)) {
-      continue
-    }
     ctx.beginPath()
     ctx.moveTo(pa.x, pa.y)
     ctx.lineTo(pb.x, pb.y)
     ctx.stroke()
   }
 
-  landmarks.forEach((lm, index) => {
-    if ((lm.visibility ?? 1) < 0.35) return
-    if (opts.legsOnly && !LEG_LANDMARK_INDEXES.has(index)) return
+  for (const lm of landmarks) {
+    if ((lm.visibility ?? 1) < 0.2) continue
     const p = map(lm)
-    if (cropY && (p.y < -10 || p.y > height + 10)) return
     ctx.beginPath()
     ctx.arc(p.x, p.y, 4, 0, Math.PI * 2)
     ctx.fill()
-  })
+  }
 
   ctx.restore()
 }

@@ -1,13 +1,11 @@
 type Props = {
   bpm: number
   running: boolean
-  legsOnly: boolean
   windowMs: number
   latencyMs: number
   onBpmChange: (bpm: number) => void
   onToggle: () => void
   onReset: () => void
-  onLegsOnlyChange: (value: boolean) => void
   onWindowMsChange: (value: number) => void
   onLatencyMsChange: (value: number) => void
 }
@@ -15,13 +13,11 @@ type Props = {
 export function MetronomeControls({
   bpm,
   running,
-  legsOnly,
   windowMs,
   latencyMs,
   onBpmChange,
   onToggle,
   onReset,
-  onLegsOnlyChange,
   onWindowMsChange,
   onLatencyMsChange,
 }: Props) {
@@ -62,14 +58,6 @@ export function MetronomeControls({
           onChange={(e) => onLatencyMsChange(Number(e.target.value))}
         />
         <span className="bpm-value">{latencyMs} мс</span>
-      </label>
-      <label className="toggle-control">
-        <input
-          type="checkbox"
-          checked={legsOnly}
-          onChange={(e) => onLegsOnlyChange(e.target.checked)}
-        />
-        <span>Только ноги</span>
       </label>
       <button
         type="button"
